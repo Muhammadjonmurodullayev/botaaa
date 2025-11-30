@@ -1,18 +1,17 @@
 const express = require("express");
 const cors = require("cors");
-const morgan = require("morgan");
-
 const videosRouter = require("./routes/videos.routes");
+require("dotenv").config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(morgan("dev"));
 
+// API
 app.use("/api/videos", videosRouter);
 
 app.get("/", (req, res) => {
-  res.send("Beket ishlayapti 🚀");
+  res.send("Kino backend ishlayapti 🚀");
 });
 
 const PORT = process.env.PORT || 3000;

@@ -1,66 +1,48 @@
-const pool = require("../db");
-const cloudinary = require("./cloudinary");
+const db = require("../db");
 
-exports.createVideo = async (req, res) => {
-  try {
-    const { title } = req.body;
-
-    if (!title) return res.status(400).json({ msg: "title majburiy" });
-    if (!req.file) return res.status(400).json({ msg: "video fayl majburiy" });
-
-    let fileUrl = null;
-
-    if (process.env.USE_CLOUDINARY === "true") {
-      const uploadRes = await cloudinary.uploader.upload(req.file.path, {
-        resource_type: "video",
-        folder: "cinema"
-      });
-      fileUrl = uploadRes.secure_url;
-    } else {
-      fileUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
-    }
-
-    const [result] = await pool.query(
-      "INSERT INTO videos (title, file_url) VALUES (?, ?)",
-      [title, fileUrl]
-    );
-
-    res.json({ id: result.insertId, title, file_url: fileUrl });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
-exports.listVideos = async (req, res) => {
-  const [rows] = await pool.query("SELECT * FROM videos ORDER BY id DESC");
+// GET - hamma videolar
+exports.getVideos = async (req, res) => {
+  const [rows] = await db.query("SELECT * FROM videos");
   res.json(rows);
 };
 
+// GET - id bo’yicha bitta video
 exports.getVideo = async (req, res) => {
-  const [rows] = await pool.query("SELECT * FROM videos WHERE id = ?", [
-    req.params.id
+  const [rows] = await db.query("SELECT * FROM videos WHERE id = ?", [
+    req.params.id,
   ]);
-  if (!rows.length) return res.status(404).json({ msg: "topilmadi" });
-  res.json(rows[0]);
+  res.json(rows[0] || null);
 };
 
-exports.updateVideo = async (req, res) => {
-  const { title } = req.body;
-  let fileUrl = null;
+// POST - yangi video qo’shish
+exports.createVideo = async (req, res) => {
+  const { raqam, video } = req.body;
 
-  if (req.file) {
-    fileUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
-  }
-
-  await pool.query(
-    "UPDATE videos SET title = ?, file_url = COALESCE(?, file_url) WHERE id = ?",
-    [title, fileUrl, req.params.id]
+  const [result] = await db.query(
+    "INSERT INTO videos (raqam, video) VALUES (?, ?)",
+    [raqam, video]
   );
 
-  res.json({ msg: "yangilandi" });
+  res.json({
+    message: "Yaratildi",
+    id: result.insertId,
+  });
 };
 
+// PUT - o’zgartirish
+exports.updateVideo = async (req, res) => {
+  const { raqam, video } = req.body;
+
+  await db.query(
+    "UPDATE videos SET raqam = ?, video = ? WHERE id = ?",
+    [raqam, video, req.params.id]
+  );
+
+  res.json({ message: "O'zgartirildi" });
+};
+
+// DELETE - o’chirish
 exports.deleteVideo = async (req, res) => {
-  await pool.query("DELETE FROM videos WHERE id = ?", [req.params.id]);
-  res.json({ msg: "o'chirildi" });
+  await db.query("DELETE FROM videos WHERE id = ?", [req.params.id]);
+  res.json({ message: "O'chirildi" });
 };
